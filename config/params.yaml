@@ -28,8 +28,9 @@
     # qos_overrides./parameter_events.publisher.durability: volatile
     # qos_overrides./parameter_events.publisher.history: keep_last
     qos_overrides./parameter_events.publisher.reliability: best_effort
-    scanTopic1: /mid70/front_scan/scan # LaserScan from front laser
-    scanTopic2: /mid70/rear_scan/scan # Laserscan from rear laser
+    scanTopic1: /mid70/front_scan # LaserScan from front laser
+    scanTopic2: /mid70/right_scan # Laserscan from right laser
+    scanTopic3: /mid70/left_scan # Laserscan from left laser
     show1: true
     show2: true
     use_sim_time: true
