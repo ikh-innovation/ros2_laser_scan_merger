@@ -137,10 +137,6 @@ def generate_launch_description():
         parameters=[LaunchConfiguration('params_file'), 
                 {'use_sim_time': simulation, 
                 'pointCloudTopic': LaunchConfiguration('merged_pointcloud_topic'),
-                'scanTopic1': LaunchConfiguration('front_scan_topic'),
-                'scanTopic2': LaunchConfiguration('right_scan_topic'),
-                'scanTopic3': LaunchConfiguration('left_scan_topic'),
-                'pointCloudFrameId': LaunchConfiguration('laserscan_frame'),
                 'target_frame': LaunchConfiguration('laserscan_frame'),
                 }],
         output='screen',
@@ -179,9 +175,9 @@ def generate_launch_description():
     
     
     # Add the actions to launch all the nodes
-    ld.add_action(front_pointcloud_to_laserscan_node)
-    ld.add_action(right_pointcloud_to_laserscan_node)
-    ld.add_action(left_pointcloud_to_laserscan_node)
+    #ld.add_action(front_pointcloud_to_laserscan_node)
+    #ld.add_action(right_pointcloud_to_laserscan_node)
+    #ld.add_action(left_pointcloud_to_laserscan_node)
     ld.add_action(ros2_laser_scan_merger_node)
     ld.add_action(merged_pointcloud_to_laserscan_node)
     

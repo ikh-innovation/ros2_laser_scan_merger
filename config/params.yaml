@@ -1,54 +1,31 @@
 /ros2_laser_scan_merger:
   ros__parameters:
-    flip1: false
-    flip2: false
-    flip3: false
-    inverse1: false
-    inverse2: false
-    inverse3: false
-    ##### Front lidar #####
-    laser1Alpha: 0.0
-    laser1AngleMax: 35.2
-    laser1AngleMin: -35.2
-    laser1B: 0
-    laser1G: 0
-    laser1R: 255
-    laser1XOff: 0.822 
-    laser1YOff: 0.0
-    laser1ZOff: -0.161
-    ##### Right lidar #####
-    laser2Alpha: -35.0  # degrees yaw (also, -5.775 roll, 8.168 pitch)
-    laser2AngleMax: 35.2
-    laser2AngleMin: -35.2
-    laser2B: 255
-    laser2G: 0
-    laser2R: 0
-    laser2XOff: -0.791
-    laser2YOff: -0.42
-    laser2ZOff: 0.2419
-    ##### Left lidar #####
-    laser3Alpha: 35.0  # degrees yaw (also, -5.775 roll, 8.168 pitch)
-    laser3AngleMax: 35.2
-    laser3AngleMin: -35.2
-    laser3B: 255
-    laser3G: 0
-    laser3R: 0
-    laser3XOff: -0.791
-    laser3YOff: 0.42
-    laser3ZOff: 0.2419    
+    lidar_topics:
+      #- "/mid70/front_scan/scan"
+      #- "/mid70/right_scan/scan"
+      #- "/mid70/left_scan/scan"
+      - "/mid70/front_scan/points"
+      - "/mid70/right_scan/points"
+      - "/mid70/left_scan/points"
+    enabled_lidars:
+      - true
+      - true
+      - true
+    target_frame: "mara_top_deck"
+    publish_merged_pointcloud: true
+    publish_merged_scan: true
+    sync: true
+    min_range: 0.2
+    max_range: 15.0
+    voxel_size: 0.05
+    angle_min: -1.57 # -0.614356 # 35.2 deg
+    angle_max: 1.57 # 0.614356 
+    enable_filter_scan: false
+    enable_filter_cloud: false  
     
-    pointCloudTopic: /mid70/merged_points # merged point cloud from both lasers
-    pointCloudFrameId: mara_top_deck
-    qos_overrides./parameter_events.publisher.depth: 1000
-    # qos_overrides./parameter_events.publisher.durability: volatile
-    # qos_overrides./parameter_events.publisher.history: keep_last
-    qos_overrides./parameter_events.publisher.reliability: best_effort
-    scanTopic1: /mid70/front_scan/scan # LaserScan from front laser
-    scanTopic2: /mid70/right_scan/scan # Laserscan from right laser
-    scanTopic3: /mid70/left_scan/scan # Laserscan from left laser
-    show1: true
-    show2: true
-    show3: true
+    pointCloudTopic_out: /mid70/merged_points # merged point cloud from all lasers
+    laserScanTopic_out: /mid70/merged_scans # merged laserscan from all lasers
+
     use_sim_time: true
 
 /merged_pointcloud_to_laserscan:
