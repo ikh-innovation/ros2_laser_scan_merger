@@ -2,37 +2,53 @@
   ros__parameters:
     flip1: false
     flip2: false
+    flip3: false
     inverse1: false
     inverse2: false
+    inverse3: false
+    ##### Front lidar #####
     laser1Alpha: 0.0
-    laser1AngleMax: 70.4
-    laser1AngleMin: -70.4
+    laser1AngleMax: 35.2
+    laser1AngleMin: -35.2
     laser1B: 0
     laser1G: 0
     laser1R: 255
-    laser1XOff: 1.0
+    laser1XOff: 0.822 
     laser1YOff: 0.0
-    laser1ZOff: 0.34
-    laser2Alpha: 180.0
-    laser2AngleMax: 70.4
-    laser2AngleMin: -70.4
+    laser1ZOff: -0.161
+    ##### Right lidar #####
+    laser2Alpha: -35.0  # degrees yaw (also, -5.775 roll, 8.168 pitch)
+    laser2AngleMax: 35.2
+    laser2AngleMin: -35.2
     laser2B: 255
     laser2G: 0
     laser2R: 0
-    laser2XOff: -1.0
-    laser2YOff: 0.0
-    laser2ZOff: 0.34
+    laser2XOff: -0.791
+    laser2YOff: -0.42
+    laser2ZOff: 0.2419
+    ##### Left lidar #####
+    laser3Alpha: 35.0  # degrees yaw (also, -5.775 roll, 8.168 pitch)
+    laser3AngleMax: 35.2
+    laser3AngleMin: -35.2
+    laser3B: 255
+    laser3G: 0
+    laser3R: 0
+    laser3XOff: -0.791
+    laser3YOff: 0.42
+    laser3ZOff: 0.2419    
+    
     pointCloudTopic: /mid70/merged_points # merged point cloud from both lasers
     pointCloudFrameId: mara_top_deck
     qos_overrides./parameter_events.publisher.depth: 1000
     # qos_overrides./parameter_events.publisher.durability: volatile
     # qos_overrides./parameter_events.publisher.history: keep_last
     qos_overrides./parameter_events.publisher.reliability: best_effort
-    scanTopic1: /mid70/front_scan # LaserScan from front laser
-    scanTopic2: /mid70/right_scan # Laserscan from right laser
-    scanTopic3: /mid70/left_scan # Laserscan from left laser
+    scanTopic1: /mid70/front_scan/scan # LaserScan from front laser
+    scanTopic2: /mid70/right_scan/scan # Laserscan from right laser
+    scanTopic3: /mid70/left_scan/scan # Laserscan from left laser
     show1: true
     show2: true
+    show3: true
     use_sim_time: true
 
 /merged_pointcloud_to_laserscan:

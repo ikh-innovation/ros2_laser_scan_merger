@@ -63,26 +63,38 @@ def generate_launch_description():
     
     declare_front_pointcloud_topic_cmd = DeclareLaunchArgument(
         'front_pointcloud_topic',
-        default_value='/mid70/front_scan_PointCloud2',
+        default_value='/mid70/front_scan/points',
         description='Front Scan Pointcloud'
     )
-    
+        
     declare_front_scan_cmd = DeclareLaunchArgument(
         'front_scan_topic',
         default_value='/mid70/front_scan/scan',
         description='Front Scan Topic'
     )
-    
-    declare_rear_pointcloud_topic_cmd = DeclareLaunchArgument(
-        'rear_pointcloud_topic',
-        default_value='/mid70/rear_scan_PointCloud2',
-        description='Rear Scan Pointcloud'
+
+    declare_right_pointcloud_topic_cmd = DeclareLaunchArgument(
+        'right_pointcloud_topic',
+        default_value='/mid70/right_scan/points',
+        description='Right Scan Pointcloud'
     )
-    
-    declare_rear_scan_topic_cmd = DeclareLaunchArgument(
-        'rear_scan_topic',
-        default_value='/mid70/rear_scan/scan',
-        description='Rear Scan Topic'
+
+    declare_right_scan_topic_cmd = DeclareLaunchArgument(
+        'right_scan_topic',
+        default_value='/mid70/right_scan/scan',
+        description='Right Scan Topic'
+    )
+
+    declare_left_pointcloud_topic_cmd = DeclareLaunchArgument(
+        'left_pointcloud_topic',
+        default_value='/mid70/left_scan/points',
+        description='Left Scan Pointcloud'
+    )
+
+    declare_left_scan_topic_cmd = DeclareLaunchArgument(
+        'left_scan_topic',
+        default_value='/mid70/left_scan/scan',
+        description='Left Scan Topic'
     )
     
     
@@ -98,14 +110,24 @@ def generate_launch_description():
         parameters=[LaunchConfiguration('pcl2_to_laserscan_params_file'), {'use_sim_time': simulation}],
     )
     
-    # Rear Pointcloud to Lasercan Node
-    rear_pointcloud_to_laserscan_node = Node(
-        name='rear_pointcloud_to_laserscan',
+    # Right Pointcloud to Lasercan Node
+    right_pointcloud_to_laserscan_node = Node(
+        name='right_pointcloud_to_laserscan',
         package='pointcloud_to_laserscan', executable='pointcloud_to_laserscan_node',
-        remappings=[('cloud_in', LaunchConfiguration('rear_pointcloud_topic')),
-                    ('scan', LaunchConfiguration('rear_scan_topic'))],
+        remappings=[('cloud_in', LaunchConfiguration('right_pointcloud_topic')),
+                    ('scan', LaunchConfiguration('right_scan_topic'))],
         parameters=[LaunchConfiguration('pcl2_to_laserscan_params_file'), {'use_sim_time': simulation,}],
     )
+
+    # Left Pointcloud to Lasercan Node
+    left_pointcloud_to_laserscan_node = Node(
+        name='left_pointcloud_to_laserscan',
+        package='pointcloud_to_laserscan', executable='pointcloud_to_laserscan_node',
+        remappings=[('cloud_in', LaunchConfiguration('left_pointcloud_topic')),
+                    ('scan', LaunchConfiguration('left_scan_topic'))],
+        parameters=[LaunchConfiguration('pcl2_to_laserscan_params_file'), {'use_sim_time': simulation,}],
+    )    
+    
     
     # ROS2 Laser Scan Merger Node
     ros2_laser_scan_merger_node = Node(
@@ -116,7 +138,8 @@ def generate_launch_description():
                 {'use_sim_time': simulation, 
                 'pointCloudTopic': LaunchConfiguration('merged_pointcloud_topic'),
                 'scanTopic1': LaunchConfiguration('front_scan_topic'),
-                'scanTopic2': LaunchConfiguration('rear_scan_topic'),
+                'scanTopic2': LaunchConfiguration('right_scan_topic'),
+                'scanTopic3': LaunchConfiguration('left_scan_topic'),
                 'pointCloudFrameId': LaunchConfiguration('laserscan_frame'),
                 'target_frame': LaunchConfiguration('laserscan_frame'),
                 }],
@@ -148,13 +171,17 @@ def generate_launch_description():
     ld.add_action(declare_merged_scan_topic_cmd)
     ld.add_action(declare_front_pointcloud_topic_cmd)
     ld.add_action(declare_front_scan_cmd)
-    ld.add_action(declare_rear_pointcloud_topic_cmd)
-    ld.add_action(declare_rear_scan_topic_cmd)
+    ld.add_action(declare_right_pointcloud_topic_cmd)
+    ld.add_action(declare_right_scan_topic_cmd)
+    ld.add_action(declare_left_pointcloud_topic_cmd)
+    ld.add_action(declare_left_scan_topic_cmd)    
+    
     
     
     # Add the actions to launch all the nodes
     ld.add_action(front_pointcloud_to_laserscan_node)
-    ld.add_action(rear_pointcloud_to_laserscan_node)
+    ld.add_action(right_pointcloud_to_laserscan_node)
+    ld.add_action(left_pointcloud_to_laserscan_node)
     ld.add_action(ros2_laser_scan_merger_node)
     ld.add_action(merged_pointcloud_to_laserscan_node)
     
