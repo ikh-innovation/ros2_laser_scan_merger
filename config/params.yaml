@@ -17,11 +17,11 @@
     sync: true
     min_range: 0.2
     max_range: 15.0
-    voxel_size: 0.05
+    voxel_size: 0.1 # 0.05
     angle_min: -1.57 # -0.614356 # 35.2 deg
     angle_max: 1.57 # 0.614356 
     enable_filter_scan: false
-    enable_filter_cloud: false  
+    enable_filter_cloud: true
     
     pointCloudTopic_out: /mid70/merged_points # merged point cloud from all lasers
     laserScanTopic_out: /mid70/merged_scans # merged laserscan from all lasers

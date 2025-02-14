@@ -104,15 +104,29 @@ private:
     }
 
     void filter_cloud(sensor_msgs::msg::PointCloud2 &cloud) {
-        pcl::PCLPointCloud2 pcl_cloud;
-        pcl_conversions::toPCL(cloud, pcl_cloud);
+        // Convert ROS2 PointCloud2 message to PCL PointCloud
+        pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_cloud(new pcl::PointCloud<pcl::PointXYZ>());
+        pcl::fromROSMsg(cloud, *pcl_cloud);
 
-        pcl::VoxelGrid<pcl::PCLPointCloud2> sor;
-        sor.setInputCloud(std::make_shared<pcl::PCLPointCloud2>(pcl_cloud));
+        // Create a new cloud to store filtered points
+        pcl::PointCloud<pcl::PointXYZ>::Ptr filtered_cloud(new pcl::PointCloud<pcl::PointXYZ>());
+
+        for (const auto &point : pcl_cloud->points) {
+            float range = std::sqrt(point.x * point.x + point.y * point.y + point.z * point.z);
+
+            if (range >= min_range_ && range <= max_range_) {
+                filtered_cloud->points.push_back(point);
+            }
+        }
+
+        // Apply voxel grid filter (optional)
+        pcl::VoxelGrid<pcl::PointXYZ> sor;
+        sor.setInputCloud(filtered_cloud);
         sor.setLeafSize(voxel_size_, voxel_size_, voxel_size_);
-        sor.filter(pcl_cloud);
+        sor.filter(*filtered_cloud);
 
-        pcl_conversions::fromPCL(pcl_cloud, cloud);
+        // Convert back to ROS2 PointCloud2 message
+        pcl::toROSMsg(*filtered_cloud, cloud);
     }
 
     std::vector<std::string> lidar_topics_;
