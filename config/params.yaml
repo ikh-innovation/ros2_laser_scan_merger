@@ -1,9 +1,6 @@
 /ros2_laser_scan_merger:
   ros__parameters:
     lidar_topics:
-      #- "/mid70/front_scan/scan"
-      #- "/mid70/right_scan/scan"
-      #- "/mid70/left_scan/scan"
       - "/mid70/front_scan/points"
       - "/mid70/right_scan/points"
       - "/mid70/left_scan/points"
@@ -15,7 +12,7 @@
     publish_merged_pointcloud: true
     publish_merged_scan: true
     sync: true
-    min_range: 0.2
+    min_range: 0.25
     max_range: 15.0
     voxel_size: 0.1 # 0.05
     angle_min: -1.57 # -0.614356 # 35.2 deg

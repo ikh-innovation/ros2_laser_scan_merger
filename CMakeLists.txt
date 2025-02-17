@@ -42,6 +42,7 @@ ament_target_dependencies(ros2_laser_scan_merger
   std_msgs 
   sensor_msgs
   pcl_conversions
+  pcl_ros
   rcl_interfaces
   rcutils
   tf2_geometry_msgs
