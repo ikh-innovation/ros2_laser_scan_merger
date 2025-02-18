@@ -12,11 +12,14 @@
     publish_merged_pointcloud: true
     publish_merged_scan: true
     sync: true
-    min_range: 0.25
-    max_range: 15.0
-    voxel_size: 0.1 # 0.05
-    angle_min: -1.57 # -0.614356 # 35.2 deg
-    angle_max: 1.57 # 0.614356 
+    voxel_size: 0.1
+
+    # Per-lidar filtering settings
+    min_ranges: [0.2, 0.2, 0.2] 
+    max_ranges: [15.0, 15.0, 15.0] 
+    min_angles: [-0.61435, -0.61435, -0.61435] # 35.2 deg
+    max_angles: [0.61435, 0.61435, 0.61435] 
+
     enable_filter_scan: false
     enable_filter_cloud: true
     

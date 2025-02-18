@@ -20,10 +20,43 @@ public:
         }
 
         parameter_event_handler_ = std::make_shared<rclcpp::ParameterEventHandler>(this);
-        parameter_callback_handle_ = parameter_event_handler_->add_parameter_callback("enabled_lidars", [this](const rclcpp::Parameter &p) {
-            enabled_lidars_ = p.as_bool_array();
-            RCLCPP_INFO(this->get_logger(), "Updated enabled_lidars");
-        });
+        auto param_callback = [this](const rclcpp::Parameter &p) {
+            const std::string &param_name = p.get_name();
+
+            if (param_name == "enabled_lidars") {
+                enabled_lidars_ = p.as_bool_array();
+                RCLCPP_INFO(this->get_logger(), "Updated enabled_lidars");
+            } else if (param_name == "min_ranges") {
+                min_ranges_ = p.as_double_array();
+                RCLCPP_INFO(this->get_logger(), "Updated min_ranges");
+            } else if (param_name == "max_ranges") {
+                max_ranges_ = p.as_double_array();
+                RCLCPP_INFO(this->get_logger(), "Updated max_ranges");
+            } else if (param_name == "min_angles") {
+                min_angles_ = p.as_double_array();
+                RCLCPP_INFO(this->get_logger(), "Updated min_angles");
+            } else if (param_name == "max_angles") {
+                max_angles_ = p.as_double_array();
+                RCLCPP_INFO(this->get_logger(), "Updated max_angles");
+            } else if (param_name == "voxel_size") {
+                voxel_size_ = p.as_double();
+                RCLCPP_INFO(this->get_logger(), "Updated voxel_size");
+            } else if (param_name == "sync") {
+                sync_ = p.as_bool();
+                RCLCPP_INFO(this->get_logger(), "Updated sync");
+            } else {
+                RCLCPP_WARN(this->get_logger(), "Unknown parameter updated: %s", param_name.c_str());
+            }
+        };
+
+        // Register parameter callbacks and store handles
+        parameter_callback_handles_.push_back(parameter_event_handler_->add_parameter_callback("enabled_lidars", param_callback));
+        parameter_callback_handles_.push_back(parameter_event_handler_->add_parameter_callback("min_ranges", param_callback));
+        parameter_callback_handles_.push_back(parameter_event_handler_->add_parameter_callback("max_ranges", param_callback));
+        parameter_callback_handles_.push_back(parameter_event_handler_->add_parameter_callback("min_angles", param_callback));
+        parameter_callback_handles_.push_back(parameter_event_handler_->add_parameter_callback("max_angles", param_callback));
+        parameter_callback_handles_.push_back(parameter_event_handler_->add_parameter_callback("voxel_size", param_callback));
+        parameter_callback_handles_.push_back(parameter_event_handler_->add_parameter_callback("sync", param_callback));
 
         for (size_t i = 0; i < lidar_topics_.size(); ++i) {
             if (enabled_lidars_[i]) {
@@ -42,15 +75,21 @@ private:
 
     void declare_parameters() {
         this->declare_parameter("lidar_topics", std::vector<std::string>{});
-        this->declare_parameter("enabled_lidars", std::vector<bool>{});
         this->declare_parameter("target_frame", "base_link");
         this->declare_parameter("publish_merged_pointcloud", true);
         this->declare_parameter("pointCloudTopic_out", "/merged_pointcloud");
         this->declare_parameter("sync", false);
-        this->declare_parameter("min_range", 0.1);
-        this->declare_parameter("max_range", 10.0);
         this->declare_parameter("voxel_size", 0.05);
         this->declare_parameter("enable_filter_cloud", false);
+
+        size_t num_lidars = lidar_topics_.size();            
+
+        this->declare_parameter("enabled_lidars", std::vector<bool>(num_lidars, true));
+        // Per Lidar filtering parameters
+        this->declare_parameter("min_ranges", std::vector<double>(num_lidars, 0.1));
+        this->declare_parameter("max_ranges", std::vector<double>(num_lidars, 10.0));
+        this->declare_parameter("min_angles", std::vector<double>(num_lidars, -M_PI));
+        this->declare_parameter("max_angles", std::vector<double>(num_lidars, M_PI));   
     }
 
     void load_parameters() {
@@ -60,10 +99,13 @@ private:
         publish_merged_pointcloud_ = get_parameter("publish_merged_pointcloud").as_bool();
         pointcloud_topic_out_ = get_parameter("pointCloudTopic_out").as_string();
         sync_ = this->get_parameter("sync").as_bool();
-        min_range_ = get_parameter("min_range").as_double();
-        max_range_ = get_parameter("max_range").as_double();
         voxel_size_ = get_parameter("voxel_size").as_double();
         enable_filter_cloud_ = get_parameter("enable_filter_cloud").as_bool();
+
+        min_ranges_ = get_parameter("min_ranges").as_double_array();
+        max_ranges_ = get_parameter("max_ranges").as_double_array();
+        min_angles_ = get_parameter("min_angles").as_double_array();
+        max_angles_ = get_parameter("max_angles").as_double_array();
     }
 
     void cloudCallback(const sensor_msgs::msg::PointCloud2::SharedPtr cloud, size_t index) {
@@ -75,7 +117,7 @@ private:
                 target_frame_, cloud->header.frame_id, tf2::TimePointZero));
 
             if (enable_filter_cloud_) {
-                filter_cloud(transformed_cloud);
+                filter_cloud(transformed_cloud, index);
             }
 
             merged_cloud_.push_back(transformed_cloud);
@@ -103,7 +145,7 @@ private:
         merged_cloud_.clear();
     }
 
-    void filter_cloud(sensor_msgs::msg::PointCloud2 &cloud) {
+    void filter_cloud(sensor_msgs::msg::PointCloud2 &cloud, size_t index) {
         // Convert ROS2 PointCloud2 message to PCL PointCloud
         pcl::PointCloud<pcl::PointXYZ>::Ptr pcl_cloud(new pcl::PointCloud<pcl::PointXYZ>());
         pcl::fromROSMsg(cloud, *pcl_cloud);
@@ -111,10 +153,17 @@ private:
         // Create a new cloud to store filtered points
         pcl::PointCloud<pcl::PointXYZ>::Ptr filtered_cloud(new pcl::PointCloud<pcl::PointXYZ>());
 
-        for (const auto &point : pcl_cloud->points) {
-            float range = std::sqrt(point.x * point.x + point.y * point.y + point.z * point.z);
+        double min_range = min_ranges_[index];
+        double max_range = max_ranges_[index];
+        double min_angle = min_angles_[index];
+        double max_angle = max_angles_[index];
 
-            if (range >= min_range_ && range <= max_range_) {
+        for (const auto &point : pcl_cloud->points) {
+            double range = std::sqrt(point.x * point.x + point.y * point.y + point.z * point.z);
+            double angle = std::atan2(point.y, point.x);
+            // double elevation_angle = std::atan2(point.z, std::sqrt(point.x * point.x + point.y * point.y)); // for filtering vertically, e.g. excluding points above or below a certain elevation
+
+            if (range >= min_range && range <= max_range && angle >= min_angle && angle <= max_angle) {
                 filtered_cloud->points.push_back(point);
             }
         }
@@ -137,7 +186,8 @@ private:
     std::string target_frame_;
     std::string pointcloud_topic_out_;
     bool publish_merged_pointcloud_;
-    double min_range_, max_range_, voxel_size_;
+    double voxel_size_;
+    std::vector<double> min_ranges_, max_ranges_, min_angles_, max_angles_;
     bool sync_;
     bool enable_filter_cloud_;
 
@@ -145,8 +195,9 @@ private:
     tf2_ros::Buffer tf_buffer_;
     tf2_ros::TransformListener tf_listener_;
 
+    // Event handler and vector for storing callback handles
     std::shared_ptr<rclcpp::ParameterEventHandler> parameter_event_handler_;
-    std::shared_ptr<rclcpp::ParameterCallbackHandle> parameter_callback_handle_;
+    std::vector<std::shared_ptr<rclcpp::ParameterCallbackHandle>> parameter_callback_handles_;
 };
 
 int main(int argc, char **argv) {
