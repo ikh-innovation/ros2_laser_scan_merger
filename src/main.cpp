@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <vector>
 #include <pcl/filters/voxel_grid.h>
+#include <pcl/filters/crop_box.h>
 #include <pcl_conversions/pcl_conversions.h>
 
 class MultiLidarMerger : public rclcpp::Node {
@@ -44,6 +45,18 @@ public:
             } else if (param_name == "sync") {
                 sync_ = p.as_bool();
                 RCLCPP_INFO(this->get_logger(), "Updated sync");
+            } else if (param_name == "cropbox_x") {
+                min_cropbox_point_.x() = -float(p.as_double());
+                max_cropbox_point_.x() = float(p.as_double());
+                RCLCPP_INFO(this->get_logger(), "Updated cropbox_x");
+            } else if (param_name == "cropbox_y") {
+                min_cropbox_point_.y() = -float(p.as_double());
+                max_cropbox_point_.y() = float(p.as_double());
+                RCLCPP_INFO(this->get_logger(), "Updated cropbox_y");      
+            } else if (param_name == "cropbox_z") {
+                min_cropbox_point_.z() = -float(p.as_double());
+                max_cropbox_point_.z() = float(p.as_double());
+                RCLCPP_INFO(this->get_logger(), "Updated cropbox_z");                       
             } else {
                 RCLCPP_WARN(this->get_logger(), "Unknown parameter updated: %s", param_name.c_str());
             }
@@ -57,6 +70,9 @@ public:
         parameter_callback_handles_.push_back(parameter_event_handler_->add_parameter_callback("max_angles", param_callback));
         parameter_callback_handles_.push_back(parameter_event_handler_->add_parameter_callback("voxel_size", param_callback));
         parameter_callback_handles_.push_back(parameter_event_handler_->add_parameter_callback("sync", param_callback));
+        parameter_callback_handles_.push_back(parameter_event_handler_->add_parameter_callback("cropbox_x", param_callback));
+        parameter_callback_handles_.push_back(parameter_event_handler_->add_parameter_callback("cropbox_y", param_callback));
+        parameter_callback_handles_.push_back(parameter_event_handler_->add_parameter_callback("cropbox_z", param_callback));
 
         for (size_t i = 0; i < lidar_topics_.size(); ++i) {
             if (enabled_lidars_[i]) {
@@ -81,6 +97,10 @@ private:
         this->declare_parameter("sync", false);
         this->declare_parameter("voxel_size", 0.05);
         this->declare_parameter("enable_filter_cloud", false);
+        
+        this->declare_parameter("cropbox_x", 0.91);
+        this->declare_parameter("cropbox_y", 0.82);
+        this->declare_parameter("cropbox_z", 3.0);
 
         size_t num_lidars = lidar_topics_.size();            
 
@@ -96,16 +116,26 @@ private:
         lidar_topics_ = this->get_parameter("lidar_topics").as_string_array();
         enabled_lidars_ = this->get_parameter("enabled_lidars").as_bool_array();
         target_frame_ = this->get_parameter("target_frame").as_string();
-        publish_merged_pointcloud_ = get_parameter("publish_merged_pointcloud").as_bool();
-        pointcloud_topic_out_ = get_parameter("pointCloudTopic_out").as_string();
+        publish_merged_pointcloud_ = this->get_parameter("publish_merged_pointcloud").as_bool();
+        pointcloud_topic_out_ = this->get_parameter("pointCloudTopic_out").as_string();
         sync_ = this->get_parameter("sync").as_bool();
-        voxel_size_ = get_parameter("voxel_size").as_double();
-        enable_filter_cloud_ = get_parameter("enable_filter_cloud").as_bool();
+        voxel_size_ = this->get_parameter("voxel_size").as_double();
+        enable_filter_cloud_ = this->get_parameter("enable_filter_cloud").as_bool();
 
-        min_ranges_ = get_parameter("min_ranges").as_double_array();
-        max_ranges_ = get_parameter("max_ranges").as_double_array();
-        min_angles_ = get_parameter("min_angles").as_double_array();
-        max_angles_ = get_parameter("max_angles").as_double_array();
+        min_cropbox_point_.x() = -this->get_parameter("cropbox_x").as_double();
+        min_cropbox_point_.y() = -this->get_parameter("cropbox_y").as_double();
+        min_cropbox_point_.z() = -this->get_parameter("cropbox_z").as_double();
+        min_cropbox_point_.w() = 1.0;
+
+        max_cropbox_point_.x() = this->get_parameter("cropbox_x").as_double();
+        max_cropbox_point_.y() = this->get_parameter("cropbox_y").as_double();
+        max_cropbox_point_.z() = this->get_parameter("cropbox_z").as_double();
+        max_cropbox_point_.w() = 1.0;       
+
+        min_ranges_ = this->get_parameter("min_ranges").as_double_array();
+        max_ranges_ = this->get_parameter("max_ranges").as_double_array();
+        min_angles_ = this->get_parameter("min_angles").as_double_array();
+        max_angles_ = this->get_parameter("max_angles").as_double_array();
     }
 
     void cloudCallback(const sensor_msgs::msg::PointCloud2::SharedPtr cloud, size_t index) {
@@ -153,6 +183,7 @@ private:
         // Create a new cloud to store filtered points
         pcl::PointCloud<pcl::PointXYZ>::Ptr filtered_cloud(new pcl::PointCloud<pcl::PointXYZ>());
 
+        /*
         double min_range = min_ranges_[index];
         double max_range = max_ranges_[index];
         double min_angle = min_angles_[index];
@@ -167,8 +198,17 @@ private:
                 filtered_cloud->points.push_back(point);
             }
         }
+        */
 
-        // Apply voxel grid filter (optional)
+        // Apply CropBox filter to remove points within the robot's footprint
+        pcl::CropBox<pcl::PointXYZ> crop_box_filter;
+        crop_box_filter.setMin(min_cropbox_point_);
+        crop_box_filter.setMax(max_cropbox_point_);
+        crop_box_filter.setInputCloud(pcl_cloud);
+        crop_box_filter.setNegative(true);
+        crop_box_filter.filter(*filtered_cloud);        
+
+        // Apply voxel grid filter for downsampling
         pcl::VoxelGrid<pcl::PointXYZ> sor;
         sor.setInputCloud(filtered_cloud);
         sor.setLeafSize(voxel_size_, voxel_size_, voxel_size_);
@@ -190,6 +230,9 @@ private:
     std::vector<double> min_ranges_, max_ranges_, min_angles_, max_angles_;
     bool sync_;
     bool enable_filter_cloud_;
+
+    Eigen::Vector4f min_cropbox_point_;
+    Eigen::Vector4f max_cropbox_point_;
 
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr cloud_pub_;
     tf2_ros::Buffer tf_buffer_;

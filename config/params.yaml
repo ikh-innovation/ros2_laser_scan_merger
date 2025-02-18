@@ -14,11 +14,15 @@
     sync: true
     voxel_size: 0.1
 
-    # Per-lidar filtering settings
-    min_ranges: [0.2, 0.2, 0.2] 
+    cropbox_x: 0.91
+    cropbox_y: 0.82
+    cropbox_z: 3.0
+
+    # Per-lidar filtering settings (relative to the target_frame)
+    min_ranges: [0.2, 0.8, 0.8] 
     max_ranges: [15.0, 15.0, 15.0] 
-    min_angles: [-0.61435, -0.61435, -0.61435] # 35.2 deg
-    max_angles: [0.61435, 0.61435, 0.61435] 
+    min_angles: [-0.61435, -2.35, 0.1] 
+    max_angles: [0.61435, -0.1, 2.35] 
 
     enable_filter_scan: false
     enable_filter_cloud: true
@@ -31,13 +35,11 @@
 /merged_pointcloud_to_laserscan:
   ros__parameters:
     angle_increment: 0.02
-    # angle_max: 1.5708
-    # angle_min: -1.5708
     angle_max: 3.14
     angle_min: -3.14
     inf_epsilon: 1.0
     max_height: 10.0
-    min_height: 0.0
+    min_height: 0.01
     qos_overrides:
       /parameter_events:
         publisher:
@@ -49,7 +51,7 @@
     range_max: 20.0
     range_min: 0.1
     scan_time: 0.1
-    target_frame: mara_top_deck
+    #target_frame: mara_top_deck
     transform_tolerance: 0.01
-    use_inf: true
+    use_inf: false #  If disabled, report infinite range (no obstacle) as range_max + 1. Otherwise report infinite range as +inf.
     use_sim_time: true
