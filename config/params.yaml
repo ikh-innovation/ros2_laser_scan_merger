@@ -12,7 +12,7 @@
     publish_merged_pointcloud: true
     publish_merged_scan: true
     sync: true
-    voxel_size: 0.1
+    voxel_size: 0.2
 
     cropbox_x: 0.91
     cropbox_y: 0.82
