@@ -12,7 +12,7 @@
     publish_merged_pointcloud: true
     publish_merged_scan: true
     sync: true
-    voxel_size: 0.2
+    voxel_size: 0.1
 
     cropbox_x: 0.91
     cropbox_y: 0.82
@@ -35,11 +35,11 @@
 /merged_pointcloud_to_laserscan:
   ros__parameters:
     angle_increment: 0.02
-    angle_max: 3.14
-    angle_min: -3.14
+    angle_max: 1.5
+    angle_min: -1.5
     inf_epsilon: 1.0
-    max_height: 10.0
-    min_height: 0.01
+    max_height: 1.5
+    min_height: -0.5 # base_link/top_deck placed at z = 0.608 m
     qos_overrides:
       /parameter_events:
         publisher:
