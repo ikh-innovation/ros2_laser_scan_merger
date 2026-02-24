@@ -18,6 +18,15 @@
     cropbox_y: 0.82
     cropbox_z: 3.0
 
+    # Ground filtering settings
+    ground_filter_enable: true
+    ground_axis_eps_deg: 15.0
+    ground_dist_thresh: 0.05
+    ground_z_prefilter_min: -2.0
+    ground_z_prefilter_max: 1.0
+    ground_min_inliers: 200
+    ground_max_iterations: 150
+
     # Per-lidar filtering settings (relative to the target_frame)
     min_ranges: [0.2, 0.8, 0.8] 
     max_ranges: [15.0, 15.0, 15.0] 
@@ -35,8 +44,8 @@
 /merged_pointcloud_to_laserscan:
   ros__parameters:
     angle_increment: 0.02
-    angle_max: 1.5
-    angle_min: -1.5
+    angle_max: 1.99
+    angle_min: -1.99 
     inf_epsilon: 1.0
     max_height: 1.5
     min_height: -0.5 # base_link/top_deck placed at z = 0.608 m
