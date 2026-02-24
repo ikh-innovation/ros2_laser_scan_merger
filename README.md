@@ -1,57 +1,96 @@
 # ros2_laser_scan_merger
-![laser scan merger configurator](https://github.com/mich1342/ros2_laser_scan_merger/blob/main/LidarCallbration.png)
-A full c++ based ros2 package to merge several laserscan / lidars topics by creating a new virtual laserscan topic. Each source laserscan could be configured via the parameter to determine the heading of each source laserscan and the relative position of each source laserscan to the virtual laserscan.
 
-## Prerequisite
+A ROS 2 C++ package for **merging multiple LiDAR / LaserScan sensors into a single
+filtered PointCloud2**, and optionally converting that merged cloud into a **virtual 2D LaserScan**.
+
+## What this fork does (important)
+
+Compared to the original repository, this fork:
+
+- ✅ Merges **multiple LiDARs / scans into a single PointCloud2**
+- ✅ Transforms all data into a **common robot frame** (e.g. `base_link`)
+- ✅ Applies **CropBox filtering** to remove robot footprint points
+- ✅ Applies **voxel downsampling** for performance
+- ✅ Converts the merged cloud into a **single LaserScan** using `pointcloud_to_laserscan`
+- ✅ Supports **RL-friendly scan preprocessing** (reduced FOV, no redundant angles)
+- ❌ Does **not** publish a merged scan directly from C++ (conversion is delegated)
+
+## Typical pipeline
+Multiple LiDARs -> C++ cloud merger (this package) -> Filtered/merged PointCloud2 -> pointcloud_to_laserscan -> Merged LaserScan (navigation)
+
+
+## Prerequisites
 1. ROS2 (Tested on Humble)
-2. Your laserscans driver (Tested using RPLIDAR S1 and RPLIDAR S1)
-3. RVIZ2
-4. RQT
-5. [Pointcloud to Laserscan](https://github.com/ros-perception/pointcloud_to_laserscan)
+2. Working LiDAR drivers
+3. Rviz2 (optional)
+4. [Pointcloud to Laserscan](https://github.com/ros-perception/pointcloud_to_laserscan)
 
-## How to use 
-1. Clone the repo to your ros2 workspace
+## Build and install
 ```bash
-git clone https://github.com/mich1342/ros2_laser_scan_merger.git
-```
-2. Edit the topic name in the launch file if needed
-
-3. Build and Source
-```bash
-colcon build && source install/setup.bash
-```
-4. Launch the package
-- To launch without visualizer
-```bash
-ros2 launch ros2_laser_scan_merger merge_2_scan.launch.py
-```
-Launch file already integrated with the pointclound_to_laserscan package 
-
-5. Open RQT to set the parameter
-```bash
-rqt
+git clone https://github.com/<your_fork>/ros2_laser_scan_merger.git
+cd ~/ros2_ws
+colcon build
+source install/setup.bash
 ```
 
-## Available Parameters
+## Launching the merger + scan conversion
+```bash
+ros2 launch ros2_laser_scan_merger merge_2_scan_launch.py
+```
+This launch file:
 
-All parameters are being set in the `params.yaml` file inside the `config` directory.
+-  starts the C++ cloud merger
+-  starts 'pointcloud_to_laserscan' for the merged cloud only
+-  publishes:
+-  merged PointCloud2
+-  merged LaserScan
 
-All parameters similar for the first and second lidar data. The `{x}` marks means the index pattern for the lidar data. Example: `show{x}` means `show1` and `show2` for 2 lidar configuration.
+## Scan FoV calibration (recommended)
 
-| Parameter Name | Default Value | Description |
-|----------------|---------------|-------------|
-| scanTopic{x} | /lidar_1/scan <br/> /lidar_2/scan |  laser scan or lidar topic |
-| show{x} | true | set as `true` to include the first lidar data or `false` to hide the specific lidar data |
-| flip{x} | false | set as `true` for upside down lidar installation |
-| laser{x}AngleMax | 180 | maximum angle in degree of the lidar data that are being used for the final merged result, useful to hide some part of the lidars data. will highly depends on each lidar specification |
-| laser{x}AngleMin | -180 | minimum angle in degree of the lidar data that are being used for the final merged result, useful to hide some part of the lidars data. will highly depends on each lidar specification |
-| inverse{x} | false | set as `true` to inverse the hidden lidar data based on the `laser{x}AngleMax` and `laser{x}AngleMin` value |
-| laser{x}Alpha | 0 | angular offset of the lidar data |
-| laser{x}XOff | -0.3 | linar offset of the lidar data in x axis |
-| laser{x}YOff | -0.475 | linar offset of the lidar data in y axis |
-| laser{x}ZOff | 0.176 | linar offset of the lidar data in z axis |
-| laser{x}B | 0 | set color to the resulted pointclound2 data (0-255) |
-| laser{x}G | 0 | set color to the resulted pointclound2 data (0-255) |
-| laser{x}R | 255 | set color to the resulted pointclound2 data (0-255) |
-| pointCloudTopic | cloud_in | pointcloud2 published topic (adjusted to `pointcloud_to_laserscan` package) |
-| pointCloudFrameId | laser | frame id of the pointcloud2 published data |
+By default, the LaserScan is generated with a full 360 degree angular range.
+However, your physical LiDAR setup usually covers only a subset of angles.
+
+To remove redundant scan bins:
+
+### Step 1: Run the FoV inference tool
+```bash
+ros2 run ros2_laser_scan_merger infer_scan_fov.py
+```
+
+### Step 2: Drive the robot
+- Rotate in place
+- Drive near walls/obstacles
+- Let it run for ~1 minute
+
+### Step 3: Read the output
+The tool prints:
+- observed angular segments
+- a recommended [angle_min, angle_max] with margin
+
+### Step 4: Update scan parameters
+Copy the suggested angles into your `pointcloud_to_laserscan` configuration and restart
+
+## Configuration files
+All configuration lives in `config/`
+
+`params.yaml` (cloud merger)
+Controls:
+
+- input cloud topics
+- target frame
+- cropbox size (robot footprint removal)
+- voxel size
+- output cloud topic
+
+`pcl2_to_laserscan.yaml`
+Controls:
+
+- scan angular range
+- angular resolution
+- height filtering
+- range limits
+
+Important notes:
+
+- If `use_inf: false`, "no return" is encoded as `range_max + inf_epsilon`
+- Height filtering is relative to the target frame (e.g. `base_link`)
