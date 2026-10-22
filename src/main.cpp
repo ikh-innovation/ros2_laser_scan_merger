@@ -5,6 +5,8 @@
 #include <tf2_ros/buffer.h>
 #include <tf2_sensor_msgs/tf2_sensor_msgs.hpp>
 
+#include <map>
+#include <utility>
 #include <vector>
 #include <string>
 #include <cmath>
@@ -260,9 +262,11 @@ private:
       pcl_cloud = filterCloudPerInput(pcl_cloud);
     }
 
-    clouds_buffer_.push_back(pcl_cloud);
+    // One slot per LiDAR: a newer scan from the same LiDAR replaces the older one,
+    // so a merge never holds two scans of one sensor and none of another.
+    clouds_by_lidar_[index] = {rclcpp::Time(cloud_msg->header.stamp), pcl_cloud};
 
-    if (publish_merged_pointcloud_ && (!sync_ || clouds_buffer_.size() == active_input_count())) {
+    if (publish_merged_pointcloud_ && (!sync_ || clouds_by_lidar_.size() == active_input_count())) {
       publishMergedCloud();
     }
   }
@@ -346,17 +350,21 @@ private:
   }
 
   void publishMergedCloud() {
-    if (clouds_buffer_.empty()) return;
+    if (clouds_by_lidar_.empty()) return;
 
     CloudT::Ptr merged(new CloudT());
     merged->reserve(estimateReserve());
 
-    for (const auto &c : clouds_buffer_) {
-      if (c && !c->empty()) {
-        *merged += *c;
+    rclcpp::Time newest_stamp(0, 0, RCL_ROS_TIME);
+    for (const auto &slot : clouds_by_lidar_) {
+      const auto &stamp = slot.second.first;
+      const auto &cloud = slot.second.second;
+      if (stamp > newest_stamp) newest_stamp = stamp;
+      if (cloud && !cloud->empty()) {
+        *merged += *cloud;
       }
     }
-    clouds_buffer_.clear();
+    clouds_by_lidar_.clear();
 
     if (!merged || merged->empty()) return;
 
@@ -368,13 +376,15 @@ private:
     sensor_msgs::msg::PointCloud2 out_msg;
     pcl::toROSMsg(*merged, out_msg);
     out_msg.header.frame_id = target_frame_;
-    out_msg.header.stamp = this->now();
+    out_msg.header.stamp = newest_stamp;  // when the newest scan was measured, not when we published
     cloud_pub_->publish(out_msg);
   }
 
   size_t estimateReserve() const {
     size_t total = 0;
-    for (const auto &c : clouds_buffer_) if (c) total += c->size();
+    for (const auto &slot : clouds_by_lidar_) {
+      if (slot.second.second) total += slot.second.second->size();
+    }
     return total;
   }
 
@@ -408,7 +418,7 @@ private:
   int ground_max_iterations_{150};
 
   // Buffer
-  std::vector<CloudT::Ptr> clouds_buffer_;
+  std::map<size_t, std::pair<rclcpp::Time, CloudT::Ptr>> clouds_by_lidar_;  // LiDAR index -> latest scan
 
   // ROS
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr cloud_pub_;
