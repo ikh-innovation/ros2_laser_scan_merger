@@ -9,7 +9,8 @@ def generate_launch_description():
     pkg = get_package_share_directory('ros2_laser_scan_merger')
 
     declare_use_sim_time = DeclareLaunchArgument(
-        'use_sim_time', default_value='True'
+        'use_sim_time', default_value='False',
+        description='True in simulation (the sim launcher passes it); False on the robot'
     )
 
     declare_laserscan_merger_params_file = DeclareLaunchArgument(

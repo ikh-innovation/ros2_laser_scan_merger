@@ -22,8 +22,8 @@ def generate_launch_description():
     # Declare launch arguments
     declare_use_sim_time_cmd = DeclareLaunchArgument(
         'use_sim_time',
-        default_value='True',
-        description='Whether to use simulation'
+        default_value='False',
+        description='True in simulation (the sim launcher passes it); False on the robot'
     )
     
     declare_params_file_cmd = DeclareLaunchArgument(

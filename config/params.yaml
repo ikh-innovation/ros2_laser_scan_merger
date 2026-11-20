@@ -39,7 +39,6 @@
     pointCloudTopic_out: /mid70/merged_points # merged point cloud from all lasers
     laserScanTopic_out: /mid70/merged_scans # merged laserscan from all lasers
 
-    use_sim_time: true
 
 /merged_pointcloud_to_laserscan:
   ros__parameters:
@@ -63,4 +62,3 @@
     #target_frame: mara_top_deck
     transform_tolerance: 0.01
     use_inf: false #  If disabled, report infinite range (no obstacle) as range_max + 1. Otherwise report infinite range as +inf.
-    use_sim_time: true
